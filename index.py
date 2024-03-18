@@ -1,6 +1,6 @@
 import sys
 import csv
-from PyQt5.QtWidgets import QApplication, QMainWindow, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox, QTableWidget, QTableWidgetItem, QInputDialog, QWidget, QComboBox
+from PyQt5.QtWidgets import QApplication, QMainWindow, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox, QTableWidget, QTableWidgetItem, QInputDialog, QWidget, QComboBox, QHeaderView
 
 # Constants for student fields and database files
 STUDENT_FIELDS = ['Name', 'ID', 'Year Level', 'Gender', 'Program Code', 'Course']
@@ -78,10 +78,12 @@ class StudentManagementApp(QMainWindow):
         self.quit_button.clicked.connect(self.close)
 
     def add_student_dialog(self):
+        """Open dialog to add a new student."""
         dialog = AddStudentDialog(self)
         dialog.exec_()
 
     def view_students(self):
+        """View all students."""
         with open(STUDENT_DATABASE, "r", newline='', encoding="utf-8") as f:
             reader = csv.reader(f)
             data = list(reader)
@@ -89,11 +91,13 @@ class StudentManagementApp(QMainWindow):
             dialog.exec_()
 
     def search_student_dialog(self):
+        """Open dialog to search for a student by name."""
         name, ok = QInputDialog.getText(self, "Search Student", "Enter name to search:")
         if ok:
             self.search_student_by_name(name)
 
     def search_student_by_name(self, name):
+        """Search for a student by name."""
         students = []
         with open(STUDENT_DATABASE, "r", newline='', encoding="utf-8") as f:
             reader = csv.reader(f)
@@ -107,18 +111,22 @@ class StudentManagementApp(QMainWindow):
             QMessageBox.information(self, "Search Result", f"No student with name containing {name} found.")
 
     def update_student_dialog(self):
+        """Open dialog to update student information."""
         dialog = UpdateStudentDialog(self)
         dialog.exec_()
 
     def delete_student_dialog(self):
+        """Open dialog to delete a student."""
         dialog = DeleteStudentDialog(self)
         dialog.exec_()
 
     def add_course_dialog(self):
+        """Open dialog to add a new course."""
         dialog = AddCourseDialog(self)
         dialog.exec_()
 
     def view_courses(self):
+        """View all courses."""
         with open(COURSE_DATABASE, "r", newline='', encoding="utf-8") as f:
             reader = csv.reader(f)
             data = list(reader)
@@ -126,11 +134,13 @@ class StudentManagementApp(QMainWindow):
             dialog.exec_()
 
     def search_course_dialog(self):
+        """Open dialog to search for a course by code."""
         code, ok = QInputDialog.getText(self, "Search Course", "Enter course code to search:")
         if ok:
             self.search_course_by_code(code)
 
     def search_course_by_code(self, code):
+        """Search for a course by code."""
         courses = []
         with open(COURSE_DATABASE, "r", newline='', encoding="utf-8") as f:
             reader = csv.reader(f)
@@ -144,10 +154,12 @@ class StudentManagementApp(QMainWindow):
             QMessageBox.information(self, "Search Result", f"No course with code containing {code} found.")
 
     def update_course_dialog(self):
+        """Open dialog to update course information."""
         dialog = UpdateCourseDialog(self)
         dialog.exec_()
 
     def delete_course_dialog(self):
+        """Open dialog to delete a course."""
         dialog = DeleteCourseDialog(self)
         dialog.exec_()
 
@@ -192,13 +204,13 @@ class AddStudentDialog(QDialog):
                     combo_box.addItem(row[1])  # Assuming course name is the second column
 
     def submit_data(self):
+        """Submit student data."""
         student_data = [field.currentText() if isinstance(field, QComboBox) else field.text() for field in self.fields]
         with open(STUDENT_DATABASE, "a", newline='', encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(student_data)
         QMessageBox.information(self, "Success", "Student added successfully.")
         self.close()
-
 
 class UpdateStudentDialog(QDialog):
     def __init__(self, parent=None):
@@ -213,8 +225,15 @@ class UpdateStudentDialog(QDialog):
         layout.addWidget(QLabel("Student ID:"))
         layout.addWidget(self.id_edit)
 
+        self.course_combo_box = QComboBox()  # Course dropdown
+        layout.addWidget(QLabel("Course:"))
+        layout.addWidget(self.course_combo_box)
+        self.populate_course_dropdown()  # Populate course dropdown
+
         self.fields = []
         for field in STUDENT_FIELDS[1:]:  # Exclude ID field
+            if field == 'Course':
+                continue  # Course field already added as dropdown
             label = QLabel(field)
             edit = QLineEdit()
             layout.addWidget(label)
@@ -225,9 +244,23 @@ class UpdateStudentDialog(QDialog):
         layout.addWidget(self.submit_button)
         self.submit_button.clicked.connect(self.submit_data)
 
+    def populate_course_dropdown(self):
+        """Populate the dropdown menu with courses from the courses CSV file."""
+        with open(COURSE_DATABASE, "r", newline='', encoding="utf-8") as f:
+            reader = csv.reader(f)
+            next(reader)  # Skip header
+            for row in reader:
+                if row:
+                    self.course_combo_box.addItem(row[1])  # Assuming course name is the second column
+
     def submit_data(self):
+        """Submit updated student data."""
         student_id = self.id_edit.text()
-        updated_student_data = [field.text() for field in self.fields]
+        updated_course = self.course_combo_box.currentText()  # Get selected course from dropdown
+        updated_student_data = [self.course_combo_box.currentText()]  # Add selected course to updated data
+
+        for field in self.fields:
+            updated_student_data.append(field.text())
 
         with open(STUDENT_DATABASE, "r", newline='', encoding="utf-8") as f:
             reader = csv.reader(f)
@@ -274,6 +307,7 @@ class DeleteStudentDialog(QDialog):
         self.submit_button.clicked.connect(self.submit_data)
 
     def submit_data(self):
+        """Delete a student."""
         student_id = self.id_edit.text()
 
         with open(STUDENT_DATABASE, "r", newline='', encoding="utf-8") as f:
@@ -323,6 +357,7 @@ class AddCourseDialog(QDialog):
         self.submit_button.clicked.connect(self.submit_data)
 
     def submit_data(self):
+        """Submit course data."""
         course_data = [field.text() for field in self.fields]
         with open(COURSE_DATABASE, "a", newline='', encoding="utf-8") as f:
             writer = csv.writer(f)
@@ -357,6 +392,7 @@ class UpdateCourseDialog(QDialog):
         self.submit_button.clicked.connect(self.submit_data)
 
     def submit_data(self):
+        """Submit updated course data."""
         course_code = self.code_edit.text()
         updated_course_data = [field.text() for field in self.fields]
 
@@ -405,6 +441,7 @@ class DeleteCourseDialog(QDialog):
         self.submit_button.clicked.connect(self.submit_data)
 
     def submit_data(self):
+        """Delete a course."""
         course_code = self.code_edit.text()
 
         with open(COURSE_DATABASE, "r", newline='', encoding="utf-8") as f:
@@ -442,19 +479,29 @@ class DisplayDataDialog(QDialog):
         self.setLayout(layout)
 
         table_widget = QTableWidget()
-        table_widget.setColumnCount(len(data[0]) + 1)  # Additional column for enrollment status
+        num_columns = len(data[0])
+        table_widget.setColumnCount(num_columns + 1)  # Additional column for enrollment status
         table_widget.setRowCount(len(data))
         headers = data[0] + ["Enrollment Status"]  # Additional header
         table_widget.setHorizontalHeaderLabels(headers)
 
+        # Set data and adjust column widths
         for i, row in enumerate(data[1:]):
             for j, cell in enumerate(row):
-                table_widget.setItem(i, j, QTableWidgetItem(cell))
+                item = QTableWidgetItem(cell)
+                table_widget.setItem(i, j, item)
 
-            # Check if the last column (course) is empty or not to determine enrollment status
-            enrollment_status = "Enrolled" if row[-1] else "Not Enrolled"
-            item = QTableWidgetItem(enrollment_status)
-            table_widget.setItem(i, len(row), item)
+        # Check and adjust column widths based on content
+        for j in range(num_columns + 1):
+            max_width = 0
+            for i in range(len(data)):
+                item = table_widget.item(i, j)
+                if item is not None:
+                    max_width = max(max_width, table_widget.fontMetrics().boundingRect(item.text()).width())
+            table_widget.setColumnWidth(j, max_width + 20)  # Add some extra space for better readability
+
+        # Adjust column header sizes to content
+        table_widget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
 
         layout.addWidget(table_widget)
 
