@@ -372,6 +372,11 @@ class AddCourseDialog(QDialog):
 
     def submit_data(self):
         """Submit course data."""
+        course_code = self.fields[0].text().strip()
+        if not self.validate_course_code(course_code):
+            QMessageBox.warning(self, "Error", "Invalid course code format. Please enter a code in the format CCC151 or GEC109.")
+            return
+
         course_data = [field.text() for field in self.fields]
         with open(COURSE_DATABASE, "a", newline='', encoding="utf-8") as f:
             writer = csv.writer(f)
@@ -379,6 +384,9 @@ class AddCourseDialog(QDialog):
         QMessageBox.information(self, "Success", "Course added successfully.")
         self.close()
 
+    def validate_course_code(self, course_code):
+        """Validate the format of the course code."""
+        return re.match(r'^[A-Z]{3}\d{3}$', course_code) is not None
 
 class UpdateCourseDialog(QDialog):
     def __init__(self, parent=None):
