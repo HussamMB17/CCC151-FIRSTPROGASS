@@ -1,5 +1,6 @@
 import sys
 import csv
+import re
 from PyQt5.QtWidgets import QApplication, QMainWindow, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox, QTableWidget, QTableWidgetItem, QInputDialog, QWidget, QComboBox, QHeaderView
 
 # Constants for student fields and database files
@@ -206,11 +207,25 @@ class AddStudentDialog(QDialog):
     def submit_data(self):
         """Submit student data."""
         student_data = [field.currentText() if isinstance(field, QComboBox) else field.text() for field in self.fields]
-        with open(STUDENT_DATABASE, "a", newline='', encoding="utf-8") as f:
-            writer = csv.writer(f)
-            writer.writerow(student_data)
-        QMessageBox.information(self, "Success", "Student added successfully.")
-        self.close()
+        
+        # Validate student data
+        if self.validate_student_data(student_data):
+            with open(STUDENT_DATABASE, "a", newline='', encoding="utf-8") as f:
+                writer = csv.writer(f)
+                writer.writerow(student_data)
+            QMessageBox.information(self, "Success", "Student added successfully.")
+            self.close()
+        else:
+            QMessageBox.warning(self, "Error", "Please enter valid data. Student ID should be in the format XXXX-XXXX.")
+
+    def validate_student_data(self, student_data):
+        """Validate student data."""
+        name, student_id, year_level, gender, program_code, course = student_data
+        # Validate student ID format (XXXX-XXXX)
+        if not re.match(r'^\d{4}-\d{4}$', student_id):
+            return False
+        # Add more validation rules as needed
+        return True
 
 class UpdateStudentDialog(QDialog):
     def __init__(self, parent=None):
@@ -287,7 +302,6 @@ class UpdateStudentDialog(QDialog):
             QMessageBox.information(self, "Error", "Student not found.")
 
         self.close()
-
 
 class DeleteStudentDialog(QDialog):
     def __init__(self, parent=None):
@@ -490,6 +504,11 @@ class DisplayDataDialog(QDialog):
             for j, cell in enumerate(row):
                 item = QTableWidgetItem(cell)
                 table_widget.setItem(i, j, item)
+
+            # Determine enrollment status
+            enrollment_status = "Enrolled" if row[-1] else "Unenrolled"
+            status_item = QTableWidgetItem(enrollment_status)
+            table_widget.setItem(i, num_columns, status_item)
 
         # Check and adjust column widths based on content
         for j in range(num_columns + 1):
