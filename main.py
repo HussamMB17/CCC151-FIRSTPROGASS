@@ -176,10 +176,23 @@ class AddStudentDialog(QDialog):
 
         self.fields = []
         for field in STUDENT_FIELDS:
-            if field == 'Course':
+            if field == 'Year Level':
                 label = QLabel(field)
                 combo_box = QComboBox()
-                # Populate the dropdown menu with courses from the courses CSV file
+                combo_box.addItems(['1', '2', '3', '4'])  # Restrict options to 1, 2, 3, 4
+                layout.addWidget(label)
+                layout.addWidget(combo_box)
+                self.fields.append(combo_box)
+            elif field == 'Gender':
+                label = QLabel(field)
+                combo_box = QComboBox()
+                combo_box.addItems(['Male', 'Female'])  # Restrict options to Male and Female
+                layout.addWidget(label)
+                layout.addWidget(combo_box)
+                self.fields.append(combo_box)
+            elif field == 'Course':
+                label = QLabel(field)
+                combo_box = QComboBox()
                 self.populate_course_dropdown(combo_box)
                 layout.addWidget(label)
                 layout.addWidget(combo_box)
@@ -197,12 +210,14 @@ class AddStudentDialog(QDialog):
 
     def populate_course_dropdown(self, combo_box):
         """Populate the dropdown menu with courses from the courses CSV file."""
+        course_codes = []
         with open(COURSE_DATABASE, "r", newline='', encoding="utf-8") as f:
             reader = csv.reader(f)
             next(reader)  # Skip header
             for row in reader:
                 if row:
-                    combo_box.addItem(row[1])  # Assuming course name is the second column
+                    course_codes.append(row[1])  # Assuming course name is the second column
+        combo_box.addItems(course_codes)
 
     def submit_data(self):
         """Submit student data."""
@@ -226,7 +241,7 @@ class AddStudentDialog(QDialog):
             return False
         # Add more validation rules as needed
         return True
-
+    
 class UpdateStudentDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -240,15 +255,29 @@ class UpdateStudentDialog(QDialog):
         layout.addWidget(QLabel("Student ID:"))
         layout.addWidget(self.id_edit)
 
+        self.name_edit = QLineEdit()  # Name field
+        layout.addWidget(QLabel("Name:"))
+        layout.addWidget(self.name_edit)
+
+        self.year_level_combo = QComboBox()  # Year Level dropdown
+        layout.addWidget(QLabel("Year Level:"))
+        layout.addWidget(self.year_level_combo)
+        self.year_level_combo.addItems(['1', '2', '3', '4'])  # Restrict options to 1, 2, 3, 4
+
+        self.gender_combo = QComboBox()  # Gender dropdown
+        layout.addWidget(QLabel("Gender:"))
+        layout.addWidget(self.gender_combo)
+        self.gender_combo.addItems(['Male', 'Female'])  # Restrict options to Male and Female
+
         self.course_combo_box = QComboBox()  # Course dropdown
         layout.addWidget(QLabel("Course:"))
         layout.addWidget(self.course_combo_box)
         self.populate_course_dropdown()  # Populate course dropdown
 
         self.fields = []
-        for field in STUDENT_FIELDS[1:]:  # Exclude ID field
-            if field == 'Course':
-                continue  # Course field already added as dropdown
+        for field in STUDENT_FIELDS[2:]:  # Exclude ID and Name fields
+            if field in ['Year Level', 'Gender', 'Course']:
+                continue  # Year Level, Gender, and Course fields already added as dropdowns
             label = QLabel(field)
             edit = QLineEdit()
             layout.addWidget(label)
@@ -271,8 +300,12 @@ class UpdateStudentDialog(QDialog):
     def submit_data(self):
         """Submit updated student data."""
         student_id = self.id_edit.text()
+        updated_name = self.name_edit.text()  # Get updated name
+        updated_year_level = self.year_level_combo.currentText()  # Get selected year level from dropdown
+        updated_gender = self.gender_combo.currentText()  # Get selected gender from dropdown
         updated_course = self.course_combo_box.currentText()  # Get selected course from dropdown
-        updated_student_data = [self.course_combo_box.currentText()]  # Add selected course to updated data
+
+        updated_student_data = [updated_name, updated_year_level, updated_gender, updated_course]  # Add selected data to updated list
 
         for field in self.fields:
             updated_student_data.append(field.text())
@@ -286,7 +319,7 @@ class UpdateStudentDialog(QDialog):
         for row in data:
             if row and student_id == row[1]:
                 found = True
-                updated_row = [row[0]] + updated_student_data
+                updated_row = [row[0], student_id] + updated_student_data  # Keep original ID, update other fields
                 updated_data.append(updated_row)
                 print("Student Found:")
                 print("\t".join(row))

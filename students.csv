@@ -1,6 +1,6 @@
 Name,ID,Year Level,Gender,Program Code,Course
 "Bansao, Hussam M.",2022-0484,1,Male,BSCS,Computer Programming 1
-"Adrian, Juan M.",2022-0001,2,Male,BSCS,Computer Programming 2
+"Adrian, Juan M.",2022-0001,Balbakaka Norse,2,Male,Life and Works of Rizal,BSCA
 "Smith, Mary F.",2022-0002,1,Female,BSCS,Computer Programming 1
 "Garcia, Maria F.",2022-0003,3,Female,BSCS,Data Structures and Algorithms
 "Chen, Li J.",2022-0004,2,Male,BSCS,Introduction to Computer Science
@@ -192,3 +192,4 @@ Name,ID,Year Level,Gender,Program Code,Course
 "Gonzales, Eva F.",2022-1099,3,Female,BSCA,Operating Systems
 "Camara, Jesus M.",2022-1100,1,Male,BSCS,Machine Learning
 Nath Balanay,2020-2093,1,Male,BSCS,Information Management
+Daniella Patlonag,2022-3999,3,Female,BSIT,Life and Works of Rizal
