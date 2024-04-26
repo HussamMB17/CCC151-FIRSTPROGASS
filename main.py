@@ -1,14 +1,15 @@
 from PyQt5.QtWidgets import QApplication, QMainWindow, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox, QTableWidget, QTableWidgetItem, QWidget, QComboBox, QHeaderView
 from PyQt5.QtCore import pyqtSignal, QObject, Qt
+from PyQt5.QtGui import QColor, QFont
 import csv
 import re
+from dialogs import AddStudentDialog, UpdateStudentDialog, AddCourseDialog, UpdateCourseDialog
 
 # Constants for student fields and database files
-STUDENT_FIELDS = ['Name', 'ID', 'Year Level', 'Gender', 'Program Code', 'Course']
+STUDENT_FIELDS = ['First Name', 'Middle Initial', 'Last Name', 'ID', 'Year Level', 'Gender', 'Course Code']
 STUDENT_DATABASE = 'students.csv'
 COURSE_FIELDS = ['Course Code', 'Course Name']
 COURSE_DATABASE = 'courses.csv'
-
 
 def get_course_data():
     """Retrieve course data from the CSV file."""
@@ -21,15 +22,13 @@ def get_course_data():
                 course_data.append(row)
     return course_data
 
-
 class Signal(QObject):
     course_added = pyqtSignal()
-
 
 class StudentManagementApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Student Management System")
+        self.setWindowTitle("University Student Management System")
         self.setGeometry(100, 100, 800, 600)
 
         self.central_widget = QWidget()
@@ -42,6 +41,14 @@ class StudentManagementApp(QMainWindow):
         self.signal = Signal()
 
         self.init_ui()
+
+        # Reload course data into the table
+        self.course_data = get_course_data()
+        self.populate_course_table(self.course_data)  # Refresh course table
+
+        # Refresh student data in the table
+        self.load_student_data()  # Refresh student table     
+        self.scroll_position = 0  
 
     def init_ui(self):
         # Create buttons
@@ -91,6 +98,36 @@ class StudentManagementApp(QMainWindow):
         if hasattr(self, 'student_table'):
             self.hide_course_table_buttons(True)
 
+            # Apply styles
+        self.apply_styles()
+
+    def apply_styles(self):
+        # Set background color and font for the main window
+        self.setStyleSheet("background-color: #f0f0f0; font-family: Arial, sans-serif; font-size: 12px;")
+        self.central_widget.setStyleSheet("background-color: #f0f0f0;")
+
+        # Set styles for buttons
+        button_style = "QPushButton { background-color: #007BFF; color: white; border: 1px solid #007BFF; border-radius: 5px; padding: 8px 16px; }"
+        button_hover_style = "QPushButton:hover { background-color: #0056b3; border: 1px solid #0056b3; }"
+        self.add_button.setStyleSheet(button_style + button_hover_style)
+        self.quit_button.setStyleSheet(button_style + button_hover_style)
+        self.toggle_button.setStyleSheet(button_style + button_hover_style)
+
+        # Set styles for search components
+        search_style = "QLineEdit { background-color: white; border: 1px solid #ced4da; border-radius: 5px; padding: 8px; }"
+        search_button_style = "QPushButton { background-color: #28a745; color: white; border: 1px solid #28a745; border-radius: 5px; padding: 8px 16px; }"
+        search_button_hover_style = "QPushButton:hover { background-color: #218838; border: 1px solid #218838; }"
+        self.search_line_edit.setStyleSheet(search_style)
+        self.search_button.setStyleSheet(search_button_style + search_button_hover_style)
+
+        # Set styles for table headers
+        header_style = "QHeaderView::section { background-color: #007BFF; color: white; border: none; padding: 8px; }"
+        self.student_table.horizontalHeader().setStyleSheet(header_style)
+
+        # Set styles for table rows
+        row_style = "QTableWidget::item { padding: 6px; border: none; }"
+        self.student_table.setStyleSheet(row_style)
+
     def search_students(self):
         """Search for students based on the selected criteria."""
         query = self.search_line_edit.text().strip().lower()
@@ -132,18 +169,26 @@ class StudentManagementApp(QMainWindow):
 
     def get_field_index(self, criteria):
         """Get the index of the field based on the criteria."""
-        fields = ['Name', 'ID', 'Year Level', 'Gender', 'Program Code', 'Course']
+        fields = ['First Name', 'Middle Initial', 'Last Name', 'ID', 'Year Level', 'Gender', 'Course Code']
         return fields.index(criteria)
 
     def populate_student_table(self, students_data):
         """Populate the student table with the provided student data."""
-        self.student_table.setRowCount(len(students_data))
+        num_rows = len(students_data)
+        num_cols = len(STUDENT_FIELDS)
+
+        self.student_table.setRowCount(num_rows)
+        self.student_table.setColumnCount(num_cols)
+        self.student_table.setHorizontalHeaderLabels(STUDENT_FIELDS)
+
         for row_index, row_data in enumerate(students_data):
             for col_index, col_data in enumerate(row_data):
                 item = QTableWidgetItem(col_data)
                 self.student_table.setItem(row_index, col_index, item)
 
-
+        # Adjust column widths to fit content
+        self.student_table.resizeColumnsToContents()
+        self.student_table.horizontalHeader().setStretchLastSection(True)
 
     def search_courses(self):
         """Search for courses based on the selected criteria."""
@@ -234,33 +279,43 @@ class StudentManagementApp(QMainWindow):
     def compute_student_status(self, data):
         """Compute the 'Status' (Enrolled/Unenrolled) based on the course."""
         students_data = []
+        
+        # Extract course codes from course_data for validation
+        valid_course_codes = [course[0] for course in self.course_data]
+
         for row in data[1:]:  # Exclude the header row
-            full_name = row[0]
-            id_value = row[1]
-            year_level = row[2]
-            gender = row[3]
-            program_code = row[4]
-            course = row[5]
+            if len(row) >= 7:  # Check if the row has at least 7 elements
+                first_name = row[0]
+                middle_initial = row[1]
+                last_name = row[2]
+                id_value = row[3]
+                year_level = row[4]
+                gender = row[5]
+                course_code = row[6]
 
-            # Determine status based on course
-            if course.lower() != "none":
-                status = "Enrolled"
+                # Determine status based on course
+                if course_code.lower() != "none":
+                    status = "Enrolled"
+                else:
+                    status = "Unenrolled"
+
+                # Append data including status to students_data
+                students_data.append([first_name, middle_initial, last_name, id_value, year_level, gender, course_code, status])
             else:
-                status = "Unenrolled"
-
-            # Append data including status to students_data
-            students_data.append([full_name, id_value, year_level, gender, program_code, course, status])
+                # Handle rows that don't have enough elements (e.g., missing course code)
+                # You can choose to skip these rows or handle them differently based on your requirements
+                print(f"Skipping row due to insufficient data: {row}")
 
         return students_data
-    
+
     def populate_student_table(self, students_data):
         """Populate the student table with data including the 'Status' column."""
         self.student_table.clear()  # Clear existing data
-        num_columns = len(STUDENT_FIELDS) + 3  # Additional column for 'Status' and two action columns
+        num_columns = len(STUDENT_FIELDS) + 3  # Additional columns for 'Status', 'Update', and 'Delete'
         self.student_table.setColumnCount(num_columns)
         self.student_table.setRowCount(len(students_data))
 
-        headers = STUDENT_FIELDS + ["Course", "Status", "Update", "Delete"]
+        headers = STUDENT_FIELDS + ["Status", "Action", "Action"]
         self.student_table.setHorizontalHeaderLabels(headers)
 
         for i, row_data in enumerate(students_data):
@@ -268,49 +323,78 @@ class StudentManagementApp(QMainWindow):
                 item = QTableWidgetItem(cell)
                 self.student_table.setItem(i, j, item)
 
-            
+            # Compute status based on course code (index 6 is the course code column)
+            course_code = row_data[6].strip().lower()
+            if course_code != "none":
+                status = "Enrolled"
+            else:
+                status = "Unenrolled"
+
+            # Add status item to the 'Status' column
+            status_item = QTableWidgetItem(status)
+            self.student_table.setItem(i, len(STUDENT_FIELDS), status_item)
+
             # Add update button
             update_button = QPushButton("Update")
-            update_button.clicked.connect(lambda _, i=i: self.update_student_dialog(i))
-            self.student_table.setCellWidget(i, num_columns - 2, update_button)
+            update_button.clicked.connect(lambda _, row=i: self.update_student_dialog(row))
+            self.student_table.setCellWidget(i, len(STUDENT_FIELDS) + 1, update_button)
 
             # Add delete button
             delete_button = QPushButton("Delete")
-            delete_button.clicked.connect(lambda _, i=i: self.confirm_delete_student(i))
-            self.student_table.setCellWidget(i, num_columns - 1, delete_button)
+            delete_button.clicked.connect(lambda _, row=i: self.confirm_delete_student(row))
+            self.student_table.setCellWidget(i, len(STUDENT_FIELDS) + 2, delete_button)
 
         # Hide update and delete buttons for course entries
         self.update_delete_buttons_visibility(False)
 
-
     def populate_course_table(self, data):
-        """Populate the course table with data."""
+        """Populate the course table with data and dynamically resize columns."""
+        num_rows = len(data)
+        num_cols = len(COURSE_FIELDS) + 2  # Additional columns for 'Update' and 'Delete'
+
         self.student_table.clear()  # Clear existing data
-        self.student_table.setColumnCount(len(COURSE_FIELDS) + 2)  # Add two columns for actions
-        self.student_table.setRowCount(len(data))
+        self.student_table.setRowCount(num_rows)
+        self.student_table.setColumnCount(num_cols)
         headers = COURSE_FIELDS + ["Update", "Delete"]
         self.student_table.setHorizontalHeaderLabels(headers)
 
+        # Populate table data and determine initial column widths
+        column_widths = [0] * num_cols
         for i, row in enumerate(data):
             for j, cell in enumerate(row):
                 item = QTableWidgetItem(cell)
                 self.student_table.setItem(i, j, item)
 
-            # Add update button
+                # Update column width based on content length
+                column_widths[j] = max(column_widths[j], len(cell) * 10)  # Adjust multiplier as needed
+
+            # Add 'Update' button
             update_button = QPushButton("Update")
-            update_button.clicked.connect(lambda _, i=i: self.update_course_dialog(i))
-            self.student_table.setCellWidget(i, len(COURSE_FIELDS), update_button)
+            update_button.clicked.connect(lambda _, idx=i: self.update_course_dialog(idx))
+            self.student_table.setCellWidget(i, num_cols - 2, update_button)
 
-            # Add delete button
+            # Add 'Delete' button
             delete_button = QPushButton("Delete")
-            delete_button.clicked.connect(lambda _, i=i: self.confirm_delete_course(i))
-            self.student_table.setCellWidget(i, len(COURSE_FIELDS) + 1, delete_button)
+            delete_button.clicked.connect(lambda _, idx=i: self.confirm_delete_course(idx))
+            self.student_table.setCellWidget(i, num_cols - 1, delete_button)
 
-        # Hide the update and delete buttons for student entries
-        self.update_delete_buttons_visibility(True)  # Change to True
+        # Set column widths based on calculated maximums
+        for col in range(num_cols):
+            self.student_table.setColumnWidth(col, column_widths[col])
 
+        # Set horizontal header resize mode to stretch last section
+        header = self.student_table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.Stretch)
 
+        # Resize columns to fit content
+        self.resize_columns_to_fit()
 
+    def resize_columns_to_fit(self):
+        """Resize each column in the table to fit its content."""
+        header = self.student_table.horizontalHeader()
+        for col in range(self.student_table.columnCount()):
+            header.setSectionResizeMode(col, QHeaderView.ResizeToContents)
+    
     def hide_student_table_buttons(self, hide):
         """Hide or show the update and delete buttons in the student data table."""
         if hasattr(self, 'student_table'):
@@ -324,21 +408,14 @@ class StudentManagementApp(QMainWindow):
     def hide_course_table_buttons(self, hide):
         """Hide or show the update and delete buttons in the course data table."""
         if hasattr(self, 'student_table'):
+            num_columns = self.student_table.columnCount()
             for i in range(self.student_table.rowCount()):
-                if not hide:
-                    update_button = self.student_table.cellWidget(i, len(STUDENT_FIELDS))
-                    delete_button = self.student_table.cellWidget(i, len(STUDENT_FIELDS) + 1)
-                    if update_button:
-                        update_button.setVisible(True)
-                    if delete_button:
-                        delete_button.setVisible(True)
-                else:
-                    update_button = self.student_table.cellWidget(i, len(STUDENT_FIELDS))
-                    delete_button = self.student_table.cellWidget(i, len(STUDENT_FIELDS) + 1)
-                    if update_button:
-                        update_button.setVisible(False)
-                    if delete_button:
-                        delete_button.setVisible(False)
+                update_button = self.student_table.cellWidget(i, num_columns - 2)
+                delete_button = self.student_table.cellWidget(i, num_columns - 1)
+                if update_button:
+                    update_button.setVisible(not hide)
+                if delete_button:
+                    delete_button.setVisible(not hide)
 
     def load_course_data(self):
         """Load course data into the table."""
@@ -385,7 +462,7 @@ class StudentManagementApp(QMainWindow):
         self.load_course_data()
 
     def delete_course(self, row):
-        """Delete a course from the CSV file and reload course data."""
+        """Delete a course from the CSV file and update student data."""
         if row >= 0 and row < len(self.course_data):
             course_code_to_delete = self.course_data[row][0]
 
@@ -400,12 +477,26 @@ class StudentManagementApp(QMainWindow):
                 writer = csv.writer(f)
                 writer.writerows(updated_data)
 
-            # Notify the user that the course has been successfully deleted
+            # Update student data where necessary
+            updated_students = []
+            with open(STUDENT_DATABASE, "r", newline='', encoding="utf-8") as f:
+                reader = csv.reader(f)
+                for row in reader:
+                    if row[6] == course_code_to_delete:
+                        # If student was enrolled in the deleted course, update their course to "None"
+                        row[6] = "None"
+                    updated_students.append(row)
+
+            # Write updated student data back to the CSV file
+            with open(STUDENT_DATABASE, "w", newline='', encoding="utf-8") as f:
+                writer = csv.writer(f)
+                writer.writerows(updated_students)
+
             QMessageBox.information(self, "Success", "Course deleted successfully.")
 
             # Reload course data into the table
             self.course_data = get_course_data()
-            self.populate_course_table(self.course_data)
+            self.populate_course_table(self.course_data)  # Refresh course table
         else:
             QMessageBox.warning(self, "Error", "Invalid row index for course deletion.")
 
@@ -422,9 +513,17 @@ class StudentManagementApp(QMainWindow):
 
     def update_student_dialog(self, row):
         """Open dialog to update student information."""
+        # Save the current scroll position
+        scroll_position = self.student_table.verticalScrollBar().value()
+
         dialog = UpdateStudentDialog(self, row, self.course_data)
         dialog.exec_()
+
+        # Reload student data into the table
         self.load_student_data()
+
+        # Restore the scroll position
+        self.student_table.verticalScrollBar().setValue(scroll_position)
 
     def confirm_delete_student(self, row):
         """Confirm deletion of a student."""
@@ -435,368 +534,29 @@ class StudentManagementApp(QMainWindow):
 
     def delete_student(self, row):
         """Delete a student."""
+        # Save the current scroll position
+        scroll_position = self.student_table.verticalScrollBar().value()
+
         with open(STUDENT_DATABASE, "r", newline='', encoding="utf-8") as f:
             reader = csv.reader(f)
             data = list(reader)
-        del data[row]
-        with open(STUDENT_DATABASE, "w", newline='', encoding="utf-8") as f:
-            writer = csv.writer(f)
-            writer.writerows(data)
-        self.load_student_data()
 
+        # Check if the row index is within the data range
+        if 0 < row <= len(data):
+            del data[row]  # Adjusted index to match list indexing (0-based)
 
-class AddStudentDialog(QDialog):
-    def __init__(self, parent=None, course_data=None):
-        super().__init__(parent)
-        self.setWindowTitle("Add Student")
-        self.setGeometry(200, 200, 400, 350)
-
-        self.course_data = course_data
-
-        layout = QVBoxLayout(self)
-
-        # Add fields for ID, first name, middle initial, last name, and program code
-        self.id_edit = QLineEdit()
-        self.first_name_edit = QLineEdit()
-        self.middle_initial_edit = QLineEdit()
-        self.last_name_edit = QLineEdit()
-        self.program_code_edit = QLineEdit()
-
-        layout.addWidget(QLabel("ID:"))
-        layout.addWidget(self.id_edit)
-        layout.addWidget(QLabel("First Name:"))
-        layout.addWidget(self.first_name_edit)
-        layout.addWidget(QLabel("Middle Initial:"))
-        layout.addWidget(self.middle_initial_edit)
-        layout.addWidget(QLabel("Last Name:"))
-        layout.addWidget(self.last_name_edit)
-        layout.addWidget(QLabel("Program Code:"))
-        layout.addWidget(self.program_code_edit)
-
-        # Add existing student fields (Year Level, Gender, Course)
-        self.fields = []
-        for field in ["Year Level", "Gender", "Course"]:
-            label = QLabel(field)
-            combo_box = QComboBox()
-            if field == "Year Level":
-                combo_box.addItems(['1', '2', '3', '4'])  # Restrict options to 1, 2, 3, 4
-            elif field == "Gender":
-                combo_box.addItems(['Male', 'Female'])  # Restrict options to Male and Female
-            elif field == "Course":
-                combo_box.addItem('None')
-                for course in self.course_data:
-                    combo_box.addItem(course[1])  # Add course name
-            layout.addWidget(label)
-            layout.addWidget(combo_box)
-            self.fields.append(combo_box)
-
-        self.submit_button = QPushButton("Submit")
-        self.submit_button.clicked.connect(self.submit_data)
-        layout.addWidget(self.submit_button)
-
-    def submit_data(self):
-        """Submit student data."""
-        id_value = self.id_edit.text()
-        first_name = self.first_name_edit.text()
-        middle_initial = self.middle_initial_edit.text()
-        last_name = self.last_name_edit.text()
-        program_code = self.program_code_edit.text()
-        year_level = self.fields[0].currentText()
-        gender = self.fields[1].currentText()
-        course = self.fields[2].currentText()
-
-        # Validate required fields (ID, First Name, Last Name, Program Code)
-        if not id_value or not first_name or not last_name or not program_code:
-            QMessageBox.warning(self, "Error", "Please enter ID, First Name, Last Name, and Program Code.")
-            return
-
-        # Format the student's name with middle initial if provided
-        if middle_initial:
-            formatted_name = f"{last_name}, {first_name} {middle_initial.upper()}"
-        else:
-            formatted_name = f"{last_name}, {first_name}"
-
-        # Prepare student data in the correct order for CSV writing
-        student_data = [formatted_name, id_value, year_level, gender, program_code, course]
-
-        # Validate all student data (you can implement custom validation logic here)
-        if self.validate_student_data(student_data):
-            try:
-                # Append student data to the CSV file
-                with open(STUDENT_DATABASE, "a", newline='', encoding="utf-8") as f:
-                    writer = csv.writer(f)
-                    writer.writerow(student_data)
-                    
-                # Show success message
-                QMessageBox.information(self, "Success", "Student added successfully.")
-
-                # Emit signal to update the main window
-                self.parent().signal.course_added.emit()
-                self.accept()  # Close the dialog
-            except Exception as e:
-                QMessageBox.warning(self, "Error", f"Error occurred: {str(e)}")
-        else:
-            QMessageBox.warning(self, "Error", "Please enter valid data.")
-
-    def validate_student_data(self, student_data):
-        """Validate student data."""
-        # Implement your custom validation logic here
-        # For example, check for unique ID, correct format of fields, etc.
-        return True
-
-
-class AddCourseDialog(QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Add Course")
-        self.setGeometry(200, 200, 400, 200)
-
-        layout = QVBoxLayout()
-        self.setLayout(layout)
-
-        self.fields = []
-        for field in COURSE_FIELDS:
-            label = QLabel(field)
-            edit = QLineEdit()
-            layout.addWidget(label)
-            layout.addWidget(edit)
-            self.fields.append(edit)
-
-        self.submit_button = QPushButton("Submit")
-        layout.addWidget(self.submit_button)
-        self.submit_button.clicked.connect(self.submit_data)
-
-    def submit_data(self):
-        """Submit course data."""
-        course_data = [field.text() for field in self.fields]
-
-        # Validate course data
-        if self.validate_course_data(course_data):
-            with open(COURSE_DATABASE, "a", newline='', encoding="utf-8") as f:
-                writer = csv.writer(f)
-                writer.writerow(course_data)
-            QMessageBox.information(self, "Success", "Course added successfully.")
-            if self.parent():
-                if hasattr(self.parent(), 'signal'):
-                    self.parent().signal.course_added.emit()  # Emit signal after adding a course
-            self.close()
-        else:
-            QMessageBox.warning(self, "Error", "Please enter valid data.")
-
-    def validate_course_data(self, course_data):
-        """Validate course data."""
-        # You can add your validation logic here
-        return True
-
-
-class UpdateStudentDialog(QDialog):
-    def __init__(self, parent=None, row=None, course_data=None):
-        super().__init__(parent)
-        self.setWindowTitle("Update Student")
-        self.setGeometry(200, 200, 400, 350)
-
-        self.row = row
-        self.course_data = course_data
-
-        layout = QVBoxLayout(self)
-
-        # Add fields for ID, first name, middle initial, last name, and program code
-        self.id_edit = QLineEdit()
-        self.first_name_edit = QLineEdit()
-        self.middle_initial_edit = QLineEdit()
-        self.last_name_edit = QLineEdit()
-        self.program_code_edit = QLineEdit()
-
-        layout.addWidget(QLabel("ID:"))
-        layout.addWidget(self.id_edit)
-        layout.addWidget(QLabel("First Name:"))
-        layout.addWidget(self.first_name_edit)
-        layout.addWidget(QLabel("Middle Initial:"))
-        layout.addWidget(self.middle_initial_edit)
-        layout.addWidget(QLabel("Last Name:"))
-        layout.addWidget(self.last_name_edit)
-        layout.addWidget(QLabel("Program Code:"))
-        layout.addWidget(self.program_code_edit)
-
-        # Add existing student fields (Year Level, Gender, Course)
-        self.fields = []
-        for field in ["Year Level", "Gender", "Course"]:
-            label = QLabel(field)
-            combo_box = QComboBox()
-            if field == "Year Level":
-                combo_box.addItems(['1', '2', '3', '4'])  # Restrict options to 1, 2, 3, 4
-            elif field == "Gender":
-                combo_box.addItems(['Male', 'Female'])  # Restrict options to Male and Female
-            elif field == "Course":
-                combo_box.addItem('None')
-                for course in self.course_data:
-                    combo_box.addItem(course[1])  # Add course name
-            layout.addWidget(label)
-            layout.addWidget(combo_box)
-            self.fields.append(combo_box)
-
-        self.submit_button = QPushButton("Submit")
-        self.submit_button.clicked.connect(self.submit_data)
-        layout.addWidget(self.submit_button)
-
-        # Pre-fill the dialog with existing student data
-        self.populate_fields()
-
-    def populate_fields(self):
-        """Populate dialog fields with existing student data."""
-        if self.row is not None:
-            # Get data from the main window's student table
-            id_value = self.parent().student_table.item(self.row, 1).text()  # ID
-            full_name = self.parent().student_table.item(self.row, 0).text()  # Full Name
-            year_level = self.parent().student_table.item(self.row, 2).text()  # Year Level
-            gender = self.parent().student_table.item(self.row, 3).text()  # Gender
-            program_code = self.parent().student_table.item(self.row, 4).text()  # Program Code
-            course = self.parent().student_table.item(self.row, 5).text()  # Course
-
-            # Populate the dialog fields
-            self.id_edit.setText(id_value)
-
-            if ',' in full_name:
-                last_name, first_and_middle = full_name.split(',', 1)
-                first_and_middle = first_and_middle.strip()
-                if ' ' in first_and_middle:
-                    first_name, middle_initial = first_and_middle.split(' ', 1)
-                    self.middle_initial_edit.setText(middle_initial)
-                else:
-                    first_name = first_and_middle
-                self.first_name_edit.setText(first_name)
-                self.last_name_edit.setText(last_name.strip())
-            else:
-                self.first_name_edit.setText(full_name)
-
-            self.program_code_edit.setText(program_code)
-
-            year_level_index = self.fields[0].findText(year_level)  # Year Level
-            if year_level_index != -1:
-                self.fields[0].setCurrentIndex(year_level_index)
-
-            gender_index = self.fields[1].findText(gender)  # Gender
-            if gender_index != -1:
-                self.fields[1].setCurrentIndex(gender_index)
-
-            course_index = self.fields[2].findText(course)  # Course
-            if course_index != -1:
-                self.fields[2].setCurrentIndex(course_index)
-
-    def submit_data(self):
-        """Submit updated student data."""
-        id_value = self.id_edit.text()
-        first_name = self.first_name_edit.text()
-        middle_initial = self.middle_initial_edit.text()
-        last_name = self.last_name_edit.text()
-        program_code = self.program_code_edit.text()
-        year_level = self.fields[0].currentText()
-        gender = self.fields[1].currentText()
-        course = self.fields[2].currentText()
-
-        # Validate required fields (ID, First Name, Last Name, Program Code)
-        if not id_value or not first_name or not last_name or not program_code:
-            QMessageBox.warning(self, "Error", "Please enter ID, First Name, Last Name, and Program Code.")
-            return
-
-        # Format the student's name with middle initial if provided
-        if middle_initial:
-            formatted_name = f"{last_name}, {first_name} {middle_initial.upper()}"
-        else:
-            formatted_name = f"{last_name}, {first_name}"
-
-        # Prepare updated student data in the correct order for CSV writing
-        updated_student_data = [formatted_name, id_value, year_level, gender, program_code, course]
-
-        # Validate all updated student data (you can implement custom validation logic here)
-        if self.validate_student_data(updated_student_data):
-            try:
-                # Update student data in the CSV file
-                with open(STUDENT_DATABASE, "r", newline='', encoding="utf-8") as f:
-                    reader = csv.reader(f)
-                    data = list(reader)
-
-                # Find the row index of the existing student data
-                row_index = None
-                for i, row in enumerate(data):
-                    if row[1] == id_value:  # Compare by ID
-                        row_index = i
-                        break
-
-                if row_index is not None:
-                    data[row_index] = updated_student_data  # Update the data
-
-                    with open(STUDENT_DATABASE, "w", newline='', encoding="utf-8") as f:
-                        writer = csv.writer(f)
-                        writer.writerows(data)
-
-                    QMessageBox.information(self, "Success", "Student updated successfully.")
-                    self.accept()  # Close the dialog after successful update
-                else:
-                    QMessageBox.warning(self, "Error", "Student not found in the database.")
-            except Exception as e:
-                QMessageBox.warning(self, "Error", f"Error occurred: {str(e)}")
-        else:
-            QMessageBox.warning(self, "Error", "Please enter valid data.")
-
-    def validate_student_data(self, student_data):
-        """Validate updated student data."""
-        # You can add your validation logic here
-        return True
-
-class UpdateCourseDialog(QDialog):
-    def __init__(self, parent=None, row=None):
-        super().__init__(parent)
-        self.setWindowTitle("Update Course")
-        self.setGeometry(200, 200, 400, 200)
-
-        self.row = row
-
-        layout = QVBoxLayout()
-        self.setLayout(layout)
-
-        self.fields = []
-        for i, field in enumerate(COURSE_FIELDS):
-            label = QLabel(field)
-            edit = QLineEdit()
-            layout.addWidget(label)
-            layout.addWidget(edit)
-            self.fields.append(edit)
-            edit.setText(parent.student_table.item(self.row, i).text())
-
-        self.submit_button = QPushButton("Submit")
-        layout.addWidget(self.submit_button)
-        self.submit_button.clicked.connect(self.submit_data)
-
-    def submit_data(self):
-        """Submit updated course data."""
-        updated_data = [field.text() for field in self.fields]
-
-        # Validate updated data
-        if self.validate_course_data(updated_data):
-            # Load existing course data
-            with open(COURSE_DATABASE, "r", newline='', encoding="utf-8") as f:
-                reader = csv.reader(f)
-                data = list(reader)
-
-            # Update data for the specific row
-            data[self.row + 1] = updated_data  # Adjust row index to account for header row
-
-            # Write updated data back to CSV file
-            with open(COURSE_DATABASE, "w", newline='', encoding="utf-8") as f:
+            with open(STUDENT_DATABASE, "w", newline='', encoding="utf-8") as f:
                 writer = csv.writer(f)
                 writer.writerows(data)
 
-            QMessageBox.information(self, "Success", "Course updated successfully.")
-            self.parent().load_course_data()  # Reload data in main window
-            self.close()
-        else:
-            QMessageBox.warning(self, "Error", "Please enter valid data.")
+            # Reload student data into the table
+            self.load_student_data()
 
-    def validate_course_data(self, course_data):
-        """Validate updated course data."""
-        # You can add your validation logic here
-        return True
+            # Restore the scroll position
+            self.student_table.verticalScrollBar().setValue(scroll_position)
+        else:
+            QMessageBox.warning(self, "Error", "Invalid row index for student deletion.")
+
 
 
 if __name__ == '__main__':
