@@ -180,7 +180,11 @@ class AddCourseDialog(QDialog):
         """Validate course data."""
         course_code = course_data[0]  # Course code is the first element of course_data
         course_name = course_data[1]  # Course name is the second element of course_data
-
+        
+        if not course_code.isupper():
+                    QMessageBox.warning(self, "Error", "Course code must be all capital letters.")
+                    return False
+        
         # Check if either the course code or the course name already exists in the database
         with open(COURSE_DATABASE, "r", newline='', encoding="utf-8") as f:
             reader = csv.reader(f)
@@ -418,7 +422,11 @@ class UpdateCourseDialog(QDialog):
         """Validate updated course data."""
         updated_course_code = course_data[0]  # Updated course code
         updated_course_name = course_data[1]  # Updated course name
-
+        
+        if not updated_course_code.isupper():
+                    QMessageBox.warning(self, "Error", "Course code must be all capital letters.")
+                    return False
+        
         # Load existing course data
         with open(COURSE_DATABASE, "r", newline='', encoding="utf-8") as f:
             reader = csv.reader(f)
