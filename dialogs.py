@@ -178,8 +178,23 @@ class AddCourseDialog(QDialog):
 
     def validate_course_data(self, course_data):
         """Validate course data."""
-        # You can add your validation logic here
+        course_code = course_data[0]  # Course code is the first element of course_data
+        course_name = course_data[1]  # Course name is the second element of course_data
+
+        # Check if either the course code or the course name already exists in the database
+        with open(COURSE_DATABASE, "r", newline='', encoding="utf-8") as f:
+            reader = csv.reader(f)
+            for row in reader:
+                if row[0] == course_code:  # Compare with course code
+                    QMessageBox.warning(self, "Error", "Course code already exists. Please enter a unique course code.")
+                    return False
+                if row[1] == course_name:  # Compare with course name
+                    QMessageBox.warning(self, "Error", "Course name already exists. Please enter a unique course name.")
+                    return False
+
+        # If neither course code nor course name is a duplicate, return True
         return True
+
 
 
 class UpdateStudentDialog(QDialog):
@@ -401,5 +416,21 @@ class UpdateCourseDialog(QDialog):
 
     def validate_course_data(self, course_data):
         """Validate updated course data."""
-        # You can add your validation logic here
+        updated_course_code = course_data[0]  # Updated course code
+        updated_course_name = course_data[1]  # Updated course name
+
+        # Load existing course data
+        with open(COURSE_DATABASE, "r", newline='', encoding="utf-8") as f:
+            reader = csv.reader(f)
+            for row_index, row in enumerate(reader):
+                if row_index == self.row:  # Skip the current row being updated
+                    continue
+                if row[0] == updated_course_code:  # Compare with course code
+                    QMessageBox.warning(self, "Error", "Course code already exists. Please enter a unique course code.")
+                    return False
+                if row[1] == updated_course_name:  # Compare with course name
+                    QMessageBox.warning(self, "Error", "Course name already exists. Please enter a unique course name.")
+                    return False
+
+        # If neither course code nor course name is a duplicate, return True
         return True

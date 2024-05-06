@@ -1,8 +1,8 @@
-irst Name,Middle Initial,Last Name,ID,Year Level,Gender,Course Code
+First Name,Middle Initial,Last Name,ID,Year Level,Gender,Course Code
 Hussam,M.,Bansao,2022-0484,1,Male,BSCS
 Li,J.,Chen,2022-0004,2,Male,BSCS
 David,M.,Lee,2022-0007,1,Male,BSCS
-Neasih,F.,Nguyen,2022-0015,2,Female,BSCS
+Linh,F.,Nguyen,2022-0015,2,Female,BSCS
 Priya,F.,Patel,2022-0014,1,Female,BSCS
 Hiroshi,M.,Tanaka,2022-0018,2,Male,BSCS
 Emma,F.,Taylor,2022-0022,2,Female,BSCS
@@ -36,7 +36,7 @@ Faisal,A.,Khan,2023-0180,3,Male,BSCA
 Rachel,K.,Gonzalez,2022-0200,1,Female,BSCS
 Adam,S.,Adams,2022-0210,2,Male,BSCS
 Alicia,D.,Evans,2023-0222,1,Female,BSCS
-Noah,L.,Thompson,2023-0230,3,Male,BSCA
+Noah,L.,Thompson,2023-0230,3,Male,BSCS
 Maya,J.,Lee,2024-0250,1,Female,BSCS
 Carlos,M.,Gomez,2023-0260,2,Male,BSCS
 Elena,R.,Hernandez,2022-0280,1,Female,BSCS
@@ -87,6 +87,7 @@ Sophie,W.,Cruz,2023-1300,1,Female,BSIT
 Elijah,M.,Wang,2022-1325,3,Male,BSIS
 Isabel,L.,Nguyen,2022-1350,1,Female,BSIS
 Leo,S.,Rodriguez,2023-1375,2,Male,BSIS
+Maya,T.,Tan,2022-1400,1,Female,BSIS
 Kai,L.,Kim,2023-1425,3,Male,BSIS
 Luna,C.,Martinez,2022-1450,1,Female,BSIS
 Finn,M.,Garcia,2023-1475,2,Male,BSIS
